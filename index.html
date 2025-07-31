@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grabador de Pantalla Multiplataforma</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: white;
+      text-align: center;
+      padding: 20px;
+    }
+    h1 {
+      margin-bottom: 20px;
+    }
+    .btn {
+      display: block;
+      background: #0a84ff;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      margin: 10px auto;
+      font-size: 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      width: 80%;
+    }
+    .btn:hover {
+      background: #006ee6;
+    }
+    video {
+      width: 90%;
+      margin-top: 20px;
+      border: 2px solid #0a84ff;
+      border-radius: 8px;
+    }
+    #config {
+      margin: 20px 0;
+    }
+    select, input {
+      padding: 8px;
+      margin: 5px;
+      border-radius: 6px;
+      border: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎥 Grabador de Pantalla</h1>
+
+  <div id="config">
+    <label>Resolución: </label>
+    <select id="resolution">
+      <option value="1280x720">720p</option>
+      <option value="1920x1080">1080p</option>
+    </select>
+
+    <label>FPS: </label>
+    <input type="number" id="fps" value="30" min="1" max="60">
+
+    <label>
+      <input type="checkbox" id="audio" checked> Grabar Audio
+    </label>
+  </div>
+
+  <button class="btn" onclick="startRecording('pc')">💻 Grabar en PC</button>
+  <button class="btn" onclick="startRecording('android')">📱 Grabar en Android</button>
+  <button class="btn" onclick="startRecording('iphone')">🍏 Grabar en iPhone</button>
+  <button class="btn" onclick="stopRecording()">⏹ Detener Grabación</button>
+
+  <video id="preview" autoplay muted></video>
+
+  <script>
+    let mediaRecorder;
+    let recordedChunks = [];
+
+    async function startRecording(mode) {
+      const resolution = document.getElementById('resolution').value.split('x');
+      const fps = parseInt(document.getElementById('fps').value);
+      const audio = document.getElementById('audio').checked;
+
+      if (mode === 'iphone') {
+        alert("⚠️ Safari en iPhone no permite grabar pantalla desde una web.\nUsa la función nativa de grabación de pantalla de iOS.");
+        return;
+      }
+
+      try {
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+          video: {
+            width: { ideal: parseInt(resolution[0]) },
+            height: { ideal: parseInt(resolution[1]) },
+            frameRate: { ideal: fps }
+          },
+          audio: audio
+        });
+
+        document.getElementById('preview').srcObject = stream;
+
+        mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+
+        mediaRecorder.ondataavailable = e => {
+          if (e.data.size > 0) recordedChunks.push(e.data);
+        };
+
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(recordedChunks, { type: 'video/webm' });
+          const url = URL.createObjectURL(blob);
+
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'grabacion_pantalla.webm';
+          a.click();
+
+          recordedChunks = [];
+        };
+
+        mediaRecorder.start();
+        alert('Grabación iniciada en ' + mode.toUpperCase());
+      } catch (err) {
+        alert('Error al iniciar la grabación: ' + err);
+      }
+    }
+
+    function stopRecording() {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+        alert('Grabación detenida');
+      }
+    }
+  </script>
+</body>
+  </html>
